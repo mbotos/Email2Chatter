@@ -1,0 +1,36 @@
+<apex:page >
+<apex:sectionHeader title="Email2Chatter Guide"/>
+  <apex:pageBlock title="A Few Examples of How it Works">
+     <apex:pageBlockSection title="Basic Profile Post">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/post1.png')}" />
+     </apex:pageBlockSection>
+     <apex:pageBlockSection title="Opportunity Post">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/post2.png')}" />
+     </apex:pageBlockSection>
+     <apex:pageBlockSection title="Contact Post">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/post3.png')}" />
+     </apex:pageBlockSection>
+     <apex:pageBlockSection title="Case and Attachment Post">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/post4.png')}" />
+     </apex:pageBlockSection>
+  </apex:pageBlock>
+  <apex:pageBlock title="Setup Instructions">
+     
+     <apex:pageBlockSection title="Step 1">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/Step1.png')}" />
+     </apex:pageBlockSection>
+     <apex:pageBlockSection title="Step 2">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/Step2.png')}" />
+     </apex:pageBlockSection>
+     <apex:pageBlockSection title="Step 3">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/Step3.png')}" />
+     </apex:pageBlockSection>
+     <apex:pageBlockSection title="Step 4">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/Step4.png')}" />
+     </apex:pageBlockSection>
+     <apex:pageBlockSection title="Step 5">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/Step5.png')}" />
+     </apex:pageBlockSection>
+  
+  </apex:pageBlock>
+</apex:page>
