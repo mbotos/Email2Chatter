@@ -130,10 +130,19 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                }
                else
                {
-                 if (bodytext != null)
-                     bodytext= subjecttext +'\n\n'+bodytext;
-                 else
-                     bodytext= subjecttext;
+                 if (bodytext.contains('http://')) {
+                 	f.Title = subjecttext;
+                 	
+                 	integer linkIndex = bodytext.indexOf('http://');
+                 	f.LinkUrl = bodytext.substring(linkIndex);
+                 	bodytext = bodytext.substring(0, linkIndex-1);
+                 } else {                 
+	                 if (bodytext != null)
+	                     bodytext= subjecttext +'\n\n'+bodytext;
+	                 else
+	                     bodytext= subjecttext;
+                 }
+                     
                  if (bodytext.length() > 1000)
                    {
                       f.body = bodytext.substring (0,1000);
@@ -311,6 +320,35 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     }
 
   
+    static testMethod void testLinkIsPosted(){
+    	
+       // Create a new email and envelope object
+       Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+       Messaging.InboundEnvelope env    = new Messaging.InboundEnvelope();
+       
+       String userName = UserInfo.getUserName();
+       User activeUser = [Select Email From User where Username = :userName limit 1];
+       String userEmail = activeUser.Email;
+    	
+       // test with subject that matches the account
+       email.subject = 'Link Title';
+       email.fromAddress = userEmail;
+       
+       string postBody = 'Post Body';
+       string link = 'http://salesforce.com';
+       email.plainTextBody = postBody + '\n' + link;
+       
+       // call the class and test it with the data in the testMethod
+       ChatterEmailHandler emailHandler = new ChatterEmailHandler();
+      
+       
+       Test.starttest();
+       emailHandler.handleInboundEmail(email, env );
+       Test.stoptest(); 
+       
+       System.assertEquals(1, [select count() From NewsFeed where FeedPost.Title = :email.subject and FeedPost.LinkUrl = :link and FeedPost.Body = :postBody]);
+    }
+
     
 
     

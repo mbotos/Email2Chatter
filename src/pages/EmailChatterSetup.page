@@ -13,6 +13,9 @@
      <apex:pageBlockSection title="Case and Attachment Post">
         <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/post4.png')}" />
      </apex:pageBlockSection>
+     <apex:pageBlockSection title="Link Post">
+        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/post5.png')}" />
+     </apex:pageBlockSection>
   </apex:pageBlock>
   <apex:pageBlock title="Setup Instructions">
      
