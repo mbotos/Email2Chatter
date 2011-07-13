@@ -3,10 +3,17 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 
         //create result for email operation
         Messaging.InboundEmailResult result = new Messaging.InboundEmailresult();
+        	Id userId;
+        	
             try{
-               User user = [select id from User where email = :email.fromAddress];
+               userId = [select id from User where email = :email.fromAddress].id;
+            } catch (QueryException ex) {
+            	userId = UserInfo.getUserId();
+            }
+            
+            try {
                Feedpost f = new Feedpost();
-               f.ParentId = user.id;
+               f.ParentId = userId;
                
                String bodytext;
                
@@ -130,7 +137,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                }
                else
                {
-                 if (bodytext.contains('http://')) {
+                 if (bodytext != null && bodytext.contains('http://')) {
                  	f.Title = subjecttext;
                  	
                  	integer linkIndex = bodytext.indexOf('http://');
@@ -170,7 +177,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                 }
                 
             } catch (Exception e) {
-               result.message='Sorry, your Chatter status could not be set.  Please make sure you are sending from the email address associated with your salesforce login.';
+               result.message='Sorry, your Chatter status could not be set. Error: ' + e;
                result.success = true;
                 return result;
               }
@@ -214,7 +221,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        
 		/*List<ContactFeed> posts = [select FeedPost.Id, FeedPost.Body, FeedPost.Title from ContactFeed where ParentId =:c.Id Order By CreatedDate DESC];
 		ContactFeed updatedPost = posts[0];
-		System.assertEquals(updatedPost.FeedPost.Body, 'test');	*/
+		System.assertEquals(updatedPost.FeedPost.Body, 'test');*/
     }
  
  	static testMethod void testChatterEmailHandler2(){
@@ -333,7 +340,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        User activeUser = [Select Email From User where Username = :userName limit 1];
        String userEmail = activeUser.Email;
     	
-       // test with subject that matches the account
+       // test with link title, post, and link
        email.subject = 'Link Title';
        email.fromAddress = userEmail;
        
@@ -349,10 +356,28 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        emailHandler.handleInboundEmail(email, env );
        Test.stoptest(); 
        
-       //System.assertEquals(1, [select count() From NewsFeed where FeedPost.Title = :email.subject and FeedPost.LinkUrl = :link and FeedPost.Body = :postBody]);
+       System.assertEquals(1, [select count() From NewsFeed where FeedPost.Title = :email.subject and FeedPost.LinkUrl = :link and FeedPost.Body = :postBody]);
     }
 
+    static testMethod void testPostFromAlternateAddress() {
+     	Messaging.InboundEmail email = createEmail('other@test.com');
+    	handleEmail(email);
+       	//System.assertEquals(1, [select count() From NewsFeed where FeedPost.Body = :email.subject]);
+    }
     
+    static Messaging.InboundEmail createEmail(string fromAddress) {
+    	Messaging.InboundEmail email = new Messaging.InboundEmail();
+       	email.subject = 'Test';
+       	email.fromAddress = fromAddress;
+       	return email;
+    }
+    
+    static void handleEmail(Messaging.InboundEmail email) {
+	    ChatterEmailHandler emailHandler = new ChatterEmailHandler();
 
+    	Test.starttest();
+       	emailHandler.handleInboundEmail(email, new Messaging.InboundEnvelope());
+       	Test.stoptest(); 
+    }
     
 }
