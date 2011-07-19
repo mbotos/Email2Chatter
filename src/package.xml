@@ -4,21 +4,5 @@
         <members>ChatterEmailHandler</members>
         <name>ApexClass</name>
     </types>
-    <types>
-        <members>EmailChatterSetup</members>
-        <name>ApexPage</name>
-    </types>
-    <types>
-        <members>Email2Chatter</members>
-        <name>CustomApplication</name>
-    </types>
-    <types>
-        <members>Email2Chatter_Setup</members>
-        <name>CustomTab</name>
-    </types>
-    <types>
-        <members>*</members>
-        <name>StaticResource</name>
-    </types>
     <version>20.0</version>
 </Package>

@@ -1,4 +1,6 @@
 global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
+	static boolean sendConfirmation = false; // TODO allow per-User setting
+	
     global Messaging.InboundEmailResult handleInboundEmail(Messaging.InboundEmail email, Messaging.InboundEnvelope envelope) {
 
         //create result for email operation
@@ -172,7 +174,9 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                 {
                    insert f;
                    //I'm saying that it worked, and that a new status was created.
-                    result.message='Your Chatter status has been successfully set to: ' + f.body;
+                   if (sendConfirmation) {
+                    	result.message='Your Chatter status has been successfully set to: ' + f.body;
+                   }
                     result.success = true;                    
                     return result;
                 }
