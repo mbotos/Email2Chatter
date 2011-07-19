@@ -6,7 +6,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
         	Id userId;
         	
             try{
-               userId = [select id from User where email = :email.fromAddress].id;
+               userId = [select id from User where email = :email.fromAddress and IsActive = true limit 1].id;
             } catch (QueryException ex) {
             	userId = UserInfo.getUserId();
             }
