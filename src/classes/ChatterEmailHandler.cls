@@ -3,6 +3,13 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 
         //create result for email operation
         Messaging.InboundEmailResult result = new Messaging.InboundEmailresult();
+        
+        if (email.subject == null) {
+        	result.message='Sorry, your Chatter status could not be set. Please add a subject in your email.';
+            result.success = false;
+            return result;  	
+        }
+        
         	Id userId;
         	
             try{
