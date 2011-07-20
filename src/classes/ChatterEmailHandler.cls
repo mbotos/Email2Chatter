@@ -147,7 +147,11 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                else
                {
                  if (bodytext != null && bodytext.contains('http://')) {
-                 	f.Title = subjecttext;
+                 	if (subjecttext.length() > 255) {
+                 		f.Title = subjecttext.substring(0, 255);
+                 	} else {
+                 		f.Title = subjecttext;
+                 	}
                  	
                  	integer linkIndex = bodytext.indexOf('http://');
                  	f.LinkUrl = bodytext.substring(linkIndex);
