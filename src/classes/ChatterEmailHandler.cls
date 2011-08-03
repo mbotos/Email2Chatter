@@ -2,6 +2,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 	static boolean sendConfirmation = false; // TODO allow per-User setting
 	static Pattern objectHashPattern = Pattern.compile('#(\\w+)\\s+([\\w ]+)');
 	static map<string, string> objectQueryField = new map<string, string>{'contact' => 'email', 'case' => 'casenumber'};
+	static map<string, string> objectFromHash = new map<string, string>{'group' => 'CollaborationGroup'};
 	
     global Messaging.InboundEmailResult handleInboundEmail(Messaging.InboundEmail email, Messaging.InboundEnvelope envelope) {
 
@@ -184,6 +185,10 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     	integer tagStart = text.indexOf('#') + 1;
     	integer tagEnd = text.indexOf(' ', tagStart);
  		string objectName = text.substring(tagStart, tagEnd).toLowerCase();
+ 		
+ 		if (objectFromHash.containsKey(objectName)) {
+ 			objectName = objectFromHash.get(objectName);
+ 		}
  	
  		string recordName;
  		integer lineBreak = text.indexOf('\n');
@@ -394,6 +399,21 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     	handleEmail(email);
        	System.assertEquals(1, [select count() From NewsFeed where FeedPost.Body = :email.subject]);
     }
+    
+    /* Access to CollaborationGroup is not supported
+    static testMethod void testGroupLink() {      
+       CollaborationGroup g = new CollaborationGroup(Name = 'Test Group');
+       insert g;
+
+       Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+       email.subject = '#group ' + a.Name;       
+       email.plainTextBody = 'Test Body';
+       
+       handleEmail(email);
+       
+       System.assertEquals(1, [select count() From CollaborationGroupFeed where ParentId = :g.id and FeedPost.Body = :email.plainTextBody]);   	
+    }
+    */
     
     static Messaging.InboundEmail createEmail(string fromAddress) {
     	Messaging.InboundEmail email = new Messaging.InboundEmail();
