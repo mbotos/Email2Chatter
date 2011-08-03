@@ -4,5 +4,9 @@
         <members>ChatterEmailHandler</members>
         <name>ApexClass</name>
     </types>
+    <types>
+        <members>EmailChatterSetup</members>
+        <name>ApexPage</name>
+    </types>
     <version>20.0</version>
 </Package>
