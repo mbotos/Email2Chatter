@@ -14,7 +14,32 @@
         <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/post4.png')}" />
      </apex:pageBlockSection>
      <apex:pageBlockSection title="Link Post">
-        <apex:image url="{!URLFOR($Resource.Email2Chatter, 'Email2Chatter/post5.png')}" />
+     	<div style="font-size: 110%">
+	     	<strong>Subject:</strong> Link Title<br/>
+	     	Post Body http://link.com<br/>
+	     	<br/>
+	     	<strong>OR</strong><br/>
+	     	<br/>
+	      	<strong>Subject:</strong> Link Title<br/>
+	     	http://link.com<br/>
+	     	Post Body <br/>
+	     	<p>Link can come before or after body text; separate with newline if before.</p>
+     	</div>
+     </apex:pageBlockSection>
+     <apex:pageBlockSection title="Object Link Post">
+     	<div style="font-size: 110%">
+	     	<strong>Subject:</strong> Link Title<br/>
+	     	#account Account Name<br/>
+	     	http://link.com<br/>
+	     	Post Body <br/>
+     	</div>
+     </apex:pageBlockSection>
+     <apex:pageBlockSection title="Custom Object Post">
+     	<div style="font-size: 110%">
+	     	<strong>Subject:</strong> #Custom_Object__c Record Name<br/>
+	     	Post Body<br/>
+	     	<p>You can also include links or attachments as shown above.</p>
+     	</div>
      </apex:pageBlockSection>
   </apex:pageBlock>
   <apex:pageBlock title="Setup Instructions">
