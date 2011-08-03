@@ -58,9 +58,14 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                  		f.Title = subjecttext;
                  	}
                  	
-                 	integer linkIndex = bodytext.indexOf('http://');
-                 	f.LinkUrl = bodytext.substring(linkIndex);
-                 	bodytext = bodytext.substring(0, linkIndex-1);
+                 	integer linkStart = bodytext.indexOf('http://');
+                 	integer linkEnd = bodyText.indexOf('\n', linkStart);
+                 	if (linkEnd != -1) {
+                 		f.LinkUrl = bodytext.substring(linkStart, linkEnd);
+                 	} else {
+                 		f.LinkUrl = bodytext.substring(linkStart);                 		
+                 	}
+                 	bodytext = bodytext.replace(f.LinkUrl, '');
                  } else {                 
 	                 if (bodytext != null)
 	                     bodytext= subjecttext +'\n\n'+bodytext;
@@ -366,12 +371,24 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        email.plainTextBody = postBody + '\n' + link;
        
        // call the class and test it with the data in the testMethod
-       ChatterEmailHandler emailHandler = new ChatterEmailHandler();
-      
+       ChatterEmailHandler emailHandler = new ChatterEmailHandler();     
        
        Test.starttest();
        emailHandler.handleInboundEmail(email, env );
        Test.stoptest(); 
+       
+       System.assertEquals(1, [select count() From NewsFeed where FeedPost.Title = :email.subject and FeedPost.LinkUrl = :link and FeedPost.Body = :postBody]);
+    }
+
+    static testMethod void testLinkBeforeText(){
+       Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+       email.subject = 'Link Title';
+       
+       string postBody = 'Post Body';
+       string link = 'http://salesforce.com';
+       email.plainTextBody = link + '\n' + postBody;
+       
+       handleEmail(email);
        
        System.assertEquals(1, [select count() From NewsFeed where FeedPost.Title = :email.subject and FeedPost.LinkUrl = :link and FeedPost.Body = :postBody]);
     }
