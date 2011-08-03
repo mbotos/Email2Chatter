@@ -3,7 +3,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 	static Pattern objectHashPattern = Pattern.compile('#(\\w+)\\s+([\\w ]+)');
 	static map<string, string> objectQueryField = new map<string, string>{'contact' => 'email', 'case' => 'casenumber'};
 	static map<string, string> objectFromHash = new map<string, string>{'group' => 'CollaborationGroup'};
-	static boolean assertResults = false; // turn off before deploying to orgs that have not enabled feeds for all objects
+	static boolean assertResults = true; // turn off before deploying to orgs that have not enabled feeds for all objects
 	
     global Messaging.InboundEmailResult handleInboundEmail(Messaging.InboundEmail email, Messaging.InboundEnvelope envelope) {
 
@@ -67,11 +67,14 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                  		f.LinkUrl = bodytext.substring(linkStart);                 		
                  	}
                  	bodytext = bodytext.replace(f.LinkUrl, '');
-                 } else {                 
-	                 if (bodytext != null)
-	                     bodytext= subjecttext +'\n\n'+bodytext;
-	                 else
+                 } else {   
+	                 if (bodytext != null) {
+	                     if (subjecttext != null)  {             	                 
+	                     	bodytext= subjecttext +'\n\n'+bodytext;
+	                     }
+	                 } else {
 	                     bodytext= subjecttext;
+	                 }
                  }
                      
                  if (bodytext.length() > 1000)
@@ -130,8 +133,10 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     	string text = email.subject;
     	
         integer hashIndex = text.indexOf('#');   
-        if (hashIndex != -1) {
+        if (hashIndex > 1) {
        		text = text.substring(0, hashIndex-1).trim();
+        } else if (hashIndex == 0) {
+        	text = null;
         }
     	
     	return text;    	
@@ -421,6 +426,23 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        
        if (assertResults) {
        		System.assertEquals(1, [select count() From AccountFeed where ParentId = :a.id and FeedPost.Title = :email.subject and FeedPost.LinkUrl = :link and FeedPost.Body = :postBody]);
+    	}
+    }
+
+    static testMethod void testAccountBeginWithHash(){
+       Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+       
+       Account a = new account(Name='Test Account');
+       insert a;
+
+       // test with link title, post, and link
+       email.subject = '#account ' + a.Name;
+       email.plainTextBody = 'Test Body';
+       
+       handleEmail(email);
+       
+       if (assertResults) {
+       		System.assertEquals(1, [select count() From AccountFeed where ParentId = :a.id and FeedPost.Body = :email.plainTextBody]);
     	}
     }
 
