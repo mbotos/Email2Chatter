@@ -1,5 +1,7 @@
 global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 	static boolean sendConfirmation = false; // TODO allow per-User setting
+	static Pattern objectHashPattern = Pattern.compile('#(\\w+)\\s+([\\w ]+)');
+	static map<string, string> objectQueryField = new map<string, string>{'contact' => 'email', 'case' => 'casenumber'};
 	
     global Messaging.InboundEmailResult handleInboundEmail(Messaging.InboundEmail email, Messaging.InboundEnvelope envelope) {
 
@@ -12,119 +14,21 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 	            return result;  	
 	        }
         
-        	Id userId;
-        	
-            try{
-               userId = [select id from User where email = :email.fromAddress and IsActive = true limit 1].id;
-            } catch (QueryException ex) {
-            	userId = UserInfo.getUserId();
-            }
-            
             try {
                Feedpost f = new Feedpost();
-               f.ParentId = userId;
+               f.ParentId = parseParentId(email);
                
-               String bodytext;
+               if (f.ParentId == null) {
+               		result.success = false;
+               		result.message = 'Unable to find a matching object in your email:\n\n' + email.subject + '\n\n' + email.plainTextBody;
+               		return result;
+               }
                
-               if ( email.plainTextBody != null)
-                  bodytext = email.plainTextBody;
-               String subjecttext = email.subject;
+               String bodytext = getBodyText(email);
+               String subjecttext = getSubjectText(email);
                
-               String match;
-               Integer s;
-               Integer l;
-               String query;
                String errormessage;
                
-               if (subjecttext.lastindexof('#account') != -1)
-               { 
-
-                 s = subjecttext.lastindexof('#account');
-                 s += 9;
-                 l = subjecttext.length();
-                 match = subjecttext.substring(s,l);
-                 s = s - 9;
-                 subjecttext = subjecttext.substring (0,s);
-                 
-                 match = match.trim();
-                 
-                query = 'select Id from Account where name = \'' + match + '\' limit 1'; 
-                                  
-                 Account a = new Account();
-                 try {
-                        a = Database.query(query);
-                        f.ParentId = a.Id;
-                        f.Type = 'TextPost';
-                 } catch (Exception e) {
-                        errormessage ='Sorry, your chatter status has not been set.  We could not find an account named: '+match;
-                    } 
-               }
-                
-                if (subjecttext.lastindexof('#contact') != -1)
-               { 
-
-                 s = subjecttext.lastindexof('#contact');
-                 s += 9;
-                 l = subjecttext.length();
-                 match = subjecttext.substring(s,l);
-                 s = s - 9;
-                 subjecttext = subjecttext.substring (0,s);
-                 
-                 match = match.trim();
-                 
-                 Contact c = new Contact();
-                 try {
-                        c = [Select Id from Contact where email = :match limit 1];
-                        f.ParentId = c.Id;
-                        f.Type = 'TextPost';
-                 } catch (Exception e) {
-                        errormessage ='Sorry, your chatter status has not been set.  We could not find a contact with email address: '+match;
-                    } 
-               }
-               
-               if (subjecttext.lastindexof('#opportunity') != -1)
-               { 
-
-                 s = subjecttext.lastindexof('#opportunity');
-                 s += 13;
-                 l = subjecttext.length();
-                 match = subjecttext.substring(s,l);
-                 s = s - 13;
-                 subjecttext = subjecttext.substring (0,s);
-
-                 match = match.trim();
-
-                 query = 'select Id from Opportunity where name = \'' + match + '\' limit 1'; 
-                 
-                 Opportunity o = new Opportunity();
-                 try {
-                        o = Database.query(query);
-                        f.ParentId = o.Id;
-                        f.Type = 'TextPost';
-                 } catch (Exception e) {
-                        errormessage ='Sorry, your chatter status has not been set.  We could not find an opportunity named: '+match;
-                    } 
-               }
-               
-               if (subjecttext.lastindexof('#case') != -1)
-               { 
-
-                 s = subjecttext.lastindexof('#case');
-                 s += 6;
-                 l = subjecttext.length();
-                 match = subjecttext.substring(s,l);
-                 s = s - 6;
-                 subjecttext = subjecttext.substring (0,s);
-
-                 Case ca = new Case();
-                 try {
-                        ca = [Select Id from Case where CaseNumber = :match limit 1];
-                        f.ParentId = ca.Id;
-                        f.Type = 'TextPost';
-                 } catch (Exception e) {
-                        errormessage ='Sorry, your chatter status has not been set.  We could not find case number: '+match;
-                    } 
-               }
 
                if (email.binaryAttachments != null)
                {
@@ -176,6 +80,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                
                 if (errormessage == null)
                 {
+                	System.debug('FeedPost ' + f);
                    insert f;
                    //I'm saying that it worked, and that a new status was created.
                    if (sendConfirmation) {
@@ -199,10 +104,113 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 
     }
     
+    string getBodyText(Messaging.InboundEmail email) {
+    	string bodytext;
+    	               
+       	if ( email.plainTextBody != null) {
+          	bodytext = email.plainTextBody;
+       
+	        integer hashIndex = bodytext.indexOf('#');   
+	        if (hashIndex != -1) {
+	       		bodytext = bodytext.substring(bodytext.indexOf('\n'));
+	        }
+       	}
+       	
+    	return bodytext;
+    }
+    
+    string getSubjectText(Messaging.InboundEmail email) {
+    	string text = email.subject;
+    	
+        integer hashIndex = text.indexOf('#');   
+        if (hashIndex != -1) {
+       		text = text.substring(0, hashIndex-1).trim();
+        }
+    	
+    	return text;    	
+    }
+    
+    Id parseParentId(Messaging.InboundEmail email) {
+    	Id parentId;
+    	
+    	System.debug('Parsing parentId from email ' + email);
+    	
+    	if (email.subject.indexOf('#') != -1) {
+    		
+    		parentId = parseParentId(email.subject);
+    		
+    	} else if (email.plainTextBody != null && email.plainTextBody.indexOf('#') != -1) {
+    		
+    		parentId = parseParentId(email.plainTextBody); 
+    		   		
+    	} else {
+    		
+    		try {
+               parentId = [select id from User where email = :email.fromAddress and IsActive = true limit 1].id;
+            } catch (QueryException ex) {
+            	parentId = UserInfo.getUserId();
+            }
+    		
+    	}
+    	
+    	return parentId;
+    }
+    
+    Id parseParentId(string text) {
+    	Id parentId;
+    	
+    	/* doesn't match
+    	Matcher objectHashMatcher = objectHashPattern.matcher(text);
+    	
+    	System.debug(objectHashPattern);
+    	System.debug('Parsing parentId from ' + text);
+    	
+    	if (objectHashMatcher.matches()) {
+    		string objectName = objectHashMatcher.group(1).toLowerCase();
+    		string recordName = objectHashMatcher.group(2);
+    		string queryField = 'name';
+    		
+    		if (objectQueryField.containsKey(objectName)) {
+    			queryField = objectQueryField.get(objectName);
+    		}		
+    		
+    		list<SObject> objects = Database.query('select Id from ' + objectName + ' where ' + queryField + ' = \'' + recordName + '\' limit 1');
+    		if (objects.size() > 0) {
+    			parentId = objects[0].Id;
+    		}
+    	}
+    	*/
+    	
+    	integer tagStart = text.indexOf('#') + 1;
+    	integer tagEnd = text.indexOf(' ', tagStart);
+ 		string objectName = text.substring(tagStart, tagEnd).toLowerCase();
+ 	
+ 		string recordName;
+ 		integer lineBreak = text.indexOf('\n');
+ 		if (lineBreak != -1) {
+ 			recordName = text.substring(tagEnd+1, lineBreak).trim();
+ 		} else {
+			recordName = text.substring(tagEnd+1).trim();
+ 		}
+		
+		string queryField = 'name';
+		
+		if (objectQueryField.containsKey(objectName)) {
+			queryField = objectQueryField.get(objectName);
+		}		
+		
+		list<SObject> objects = Database.query('select Id from ' + objectName + ' where ' + queryField + ' = \'' + recordName + '\' limit 1');
+		if (objects.size() > 0) {
+			parentId = objects[0].Id;
+		}   	
+    	
+    	return parentId;
+    }
+    
     
     // Tests won't run properly until email service is setup, so asserts are commented out for installation
     
-    static testMethod void testChatterEmailHandler1(){
+    static testMethod void testContact(){
     	
     	 // Create a new email and envelope object
        Messaging.InboundEmail email = new Messaging.InboundEmail() ;
@@ -234,12 +242,10 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        ChatterEmailHandlerTest1.handleInboundEmail(email, env );
        Test.stoptest(); 
        
-		/*List<ContactFeed> posts = [select FeedPost.Id, FeedPost.Body, FeedPost.Title from ContactFeed where ParentId =:c.Id Order By CreatedDate DESC];
-		ContactFeed updatedPost = posts[0];
-		System.assertEquals(updatedPost.FeedPost.Body, 'test');*/
+		System.assertEquals(1, [select count() from ContactFeed where ParentId =:c.Id and FeedPost.Body = 'test']);
     }
  
- 	static testMethod void testChatterEmailHandler2(){
+ 	static testMethod void testCase(){
     	
        // Create a new email and envelope object
        Messaging.InboundEmail email = new Messaging.InboundEmail() ;
@@ -266,14 +272,10 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        ChatterEmailHandlerTest2.handleInboundEmail(email, env );  
        Test.stoptest(); 
        
-      /* List<CaseFeed> posts = [select FeedPost.Id, FeedPost.Body, FeedPost.Title from CaseFeed where ParentId =:ca.Id Order By CreatedDate DESC];
-       CaseFeed updatedPost2 = posts[0];
-       System.assertEquals('test2', updatedPost2.FeedPost.Body); */
-       
-       
+		System.assertEquals(1, [select count() from CaseFeed where ParentId =:ca.Id and FeedPost.Body = 'test2']);
     }
     
-    static testMethod void testChatterEmailHandler3(){
+    static testMethod void testOpportunity(){
     	
     	// Create a new email and envelope object
        Messaging.InboundEmail email = new Messaging.InboundEmail() ;
@@ -307,13 +309,10 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        Test.stoptest(); 
        
        
-		/*List<OpportunityFeed> posts = [select FeedPost.Id, FeedPost.Body, FeedPost.Title from OpportunityFeed where ParentId =:o.Id Order By CreatedDate DESC];
-		OpportunityFeed updatedPost3 = posts[0];
-		
-        System.assertEquals('test3', updatedPost3.FeedPost.Body); */
+		System.assertEquals(1, [select count() from OpportunityFeed where ParentId =:o.Id and FeedPost.Body = 'test3']);
     }    
     
-    static testMethod void testChatterEmailHandler4(){
+    static testMethod void testAccount(){
     	
        // Create a new email and envelope object
        Messaging.InboundEmail email = new Messaging.InboundEmail() ;
@@ -339,9 +338,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        ChatterEmailHandlerTest4.handleInboundEmail(email, env );
        Test.stoptest(); 
        
-		/*List<AccountFeed> posts = [select FeedPost.Id, FeedPost.Body, FeedPost.Title from AccountFeed where ParentId =:a.Id Order By CreatedDate DESC]; 
-		AccountFeed updatedPost = posts[0];
-		System.assertEquals(updatedPost.FeedPost.Body, 'test4');	*/
+		System.assertEquals(1, [select count() from AccountFeed where ParentId =:a.Id and FeedPost.Body = 'test4']);
     }
 
   
@@ -374,10 +371,28 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        System.assertEquals(1, [select count() From NewsFeed where FeedPost.Title = :email.subject and FeedPost.LinkUrl = :link and FeedPost.Body = :postBody]);
     }
 
+    static testMethod void testAccountLinkIsPosted(){
+       Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+       
+       Account a = new account(Name='Test Account');
+       insert a;
+
+       // test with link title, post, and link
+       email.subject = 'Link Title';
+        
+       string postBody = 'Test Body';
+       string link = 'http://salesforce.com';
+       email.plainTextBody = '#account ' + a.Name + '\n' + postBody + '\n' + link;
+       
+       handleEmail(email);
+       
+       System.assertEquals(1, [select count() From AccountFeed where ParentId = :a.id and FeedPost.Title = :email.subject and FeedPost.LinkUrl = :link and FeedPost.Body = :postBody]);
+    }
+
     static testMethod void testPostFromAlternateAddress() {
      	Messaging.InboundEmail email = createEmail('other@test.com');
     	handleEmail(email);
-       	//System.assertEquals(1, [select count() From NewsFeed where FeedPost.Body = :email.subject]);
+       	System.assertEquals(1, [select count() From NewsFeed where FeedPost.Body = :email.subject]);
     }
     
     static Messaging.InboundEmail createEmail(string fromAddress) {
