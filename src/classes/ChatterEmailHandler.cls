@@ -26,12 +26,11 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                		return result;
                }
                
-               String bodytext = getBodyText(email);
-               String subjecttext = getSubjectText(email);
+               boolean removeHash = !isUserId(f.parentId);
+               System.debug('removeHash ' + removeHash);
+               String bodytext = getBodyText(email, removeHash);
+               String subjecttext = getSubjectText(email, removeHash);
                
-               String errormessage;
-               
-
                if (email.binaryAttachments != null)
                {
                    f.body = subjecttext;
@@ -52,7 +51,9 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                }
                else
                {
+               	System.debug('bodytext ' + bodytext);
                  if (bodytext != null && bodytext.contains('http://')) {
+                 	System.debug('Parsing link');
                  	if (subjecttext.length() > 255) {
                  		f.Title = subjecttext.substring(0, 255);
                  	} else {
@@ -68,6 +69,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                  	}
                  	bodytext = bodytext.replace(f.LinkUrl, '');
                  } else {   
+                 	System.debug('No link');
 	                 if (bodytext != null) {
 	                     if (subjecttext != null)  {             	                 
 	                     	bodytext= subjecttext +'\n\n'+bodytext;
@@ -88,58 +90,67 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 
                }
                
-                if (errormessage == null)
-                {
-                	System.debug('FeedPost ' + f);
-                   insert f;
-                   //I'm saying that it worked, and that a new status was created.
-                   if (sendConfirmation) {
-                    	result.message='Your Chatter status has been successfully set to: ' + f.body;
-                   }
-                    result.success = true;                    
-                    return result;
-                }
-                else
-                {
-                    result.message=errormessage;
-                    result.success = true;                    
-                    return result;
-                }
+               System.debug('FeedPost ' + f);
+               insert f;
+
+               if (sendConfirmation) {
+                	result.message='Your Chatter status has been successfully set to: ' + f.body;
+               }
+               
+               result.success = true;                    
                 
             } catch (Exception e) {
-               result.message='Sorry, your Chatter status could not be set. Error: ' + e;
-               result.success = true;
-                return result;
-              }
+               result.message='Sorry, your Chatter status could not be set.\n\n' + e.getMessage() + '\n\n' +e.getStackTraceString();
+               result.success = false;
+            }
 
+            return result;
     }
     
-    string getBodyText(Messaging.InboundEmail email) {
+    string getBodyText(Messaging.InboundEmail email, boolean removeHash) {
     	string bodytext;
     	               
-       	if ( email.plainTextBody != null) {
+       	if (email.plainTextBody != null) {
           	bodytext = email.plainTextBody;
        
-	        integer hashIndex = bodytext.indexOf('#');   
-	        if (hashIndex != -1) {
-	       		bodytext = bodytext.substring(bodytext.indexOf('\n'));
-	        }
+       		if (removeHash) {
+		        integer hashIndex = bodytext.indexOf('#');   
+		        
+		        if (hashIndex != -1) {
+                 	integer linkeBreak = bodyText.indexOf('\n', hashIndex);
+                 	string hashText;
+                 	
+                 	if (linkeBreak != -1) {
+                 		hashText = bodytext.substring(hashIndex, linkeBreak);
+                 	} else {
+                 		hashText = bodytext.substring(hashIndex);                 		
+                 	}
+                 	
+                 	bodytext = bodytext.replace(hashText, '');
+		        }
+       		}
        	}
        	
     	return bodytext;
     }
     
-    string getSubjectText(Messaging.InboundEmail email) {
+    string getSubjectText(Messaging.InboundEmail email, boolean removeHash) {
     	string text = email.subject;
     	
-        integer hashIndex = text.indexOf('#');   
-        if (hashIndex > 1) {
-       		text = text.substring(0, hashIndex-1).trim();
-        } else if (hashIndex == 0) {
-        	text = null;
-        }
+    	if (removeHash) {
+	        integer hashIndex = text.indexOf('#');   
+	        if (hashIndex > 1) {
+	       		text = text.substring(0, hashIndex-1).trim();
+	        } else if (hashIndex == 0) {
+	        	text = null;
+	        }
+    	}
     	
     	return text;    	
+    }
+    
+    boolean isUserId(string i) {
+    	return i.startsWith('005');
     }
     
     Id parseParentId(Messaging.InboundEmail email) {
@@ -155,8 +166,9 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     		
     		parentId = parseParentId(email.plainTextBody); 
     		   		
-    	} else {
-    		
+    	} 
+
+		if (parentId == null) {  		
     		try {
                parentId = [select id from User where email = :email.fromAddress and IsActive = true limit 1].id;
             } catch (QueryException ex) {
@@ -202,7 +214,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
  		}
  	
  		string recordName;
- 		integer lineBreak = text.indexOf('\n');
+ 		integer lineBreak = text.indexOf('\n', tagEnd);
  		if (lineBreak != -1) {
  			recordName = text.substring(tagEnd+1, lineBreak).trim();
  		} else {
@@ -215,10 +227,17 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 			queryField = objectQueryField.get(objectName);
 		}		
 		
-		list<SObject> objects = Database.query('select Id from ' + objectName + ' where ' + queryField + ' = \'' + recordName + '\' limit 1');
-		if (objects.size() > 0) {
-			parentId = objects[0].Id;
-		}   	
+		try {
+			list<SObject> objects = Database.query('select Id from ' + objectName + ' where ' + queryField + ' = \'' + recordName + '\' limit 1');
+			if (objects.size() > 0) {
+				parentId = objects[0].Id;
+			}  
+		} catch (QueryException ex) {
+			if (ex.getMessage().indexOf('sObject type') == -1) { // ignore plain hashtags that aren't sObject types
+				System.debug('Rethrowing');
+				throw ex;
+			}
+		} 	
     	
     	return parentId;
     }
@@ -435,7 +454,6 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        Account a = new account(Name='Test Account');
        insert a;
 
-       // test with link title, post, and link
        email.subject = '#account ' + a.Name;
        email.plainTextBody = 'Test Body';
        
@@ -455,6 +473,18 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     	}
    	}
     
+    static testMethod void testNonObjectHash(){
+       Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+       email.subject = 'Title';
+       email.plainTextBody = 'http://link.com\nTest #hash Body';
+       
+       handleEmail(email);
+       
+       if (assertResults) {
+       		System.assertEquals(1, [select count() From NewsFeed where FeedPost.Title = :email.subject]);
+    	}
+    }
+
     /* Access to CollaborationGroup is not supported
     static testMethod void testGroupLink() {      
        CollaborationGroup g = new CollaborationGroup(Name = 'Test Group');
