@@ -36,9 +36,9 @@
      </apex:pageBlockSection>
      <apex:pageBlockSection title="Custom Object Post">
      	<div style="font-size: 110%">
-	     	<strong>Subject:</strong> #Custom_Object__c Record Name<br/>
+	     	<strong>Subject:</strong> #CustomObject Record Name<br/>
 	     	Post Body<br/>
-	     	<p>You can also include links or attachments as shown above.</p>
+	     	<p>The hashtag should be the object's label stripped of markup, ie. Custom_Object__c becomes CustomObject (case-insensitive). You can also include links or attachments as shown above.</p>
      	</div>
      </apex:pageBlockSection>
   </apex:pageBlock>

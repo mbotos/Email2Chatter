@@ -3,7 +3,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 	static Pattern objectHashPattern = Pattern.compile('#(\\w+)\\s+([\\w ]+)');
 	static map<string, string> objectQueryField = new map<string, string>{'contact' => 'email', 'case' => 'casenumber'};
 	static map<string, string> objectFromHash = new map<string, string>{'group' => 'CollaborationGroup'};
-	static boolean assertResults = true; // turn off before deploying to orgs that have not enabled feeds for all objects
+	static boolean assertResults = false; // turn off before deploying to orgs that have not enabled feeds for all objects
 	
     global Messaging.InboundEmailResult handleInboundEmail(Messaging.InboundEmail email, Messaging.InboundEnvelope envelope) {
 
@@ -180,6 +180,22 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     	return parentId;
     }
     
+    string getObjectName(string hashName) {
+    	map<string, string> objectFromHashFull = new map<string, string>();
+    	
+        Map<String, Schema.SObjectType> globalDescribe = Schema.getGlobalDescribe();
+        
+        for (string sobjectName : globalDescribe.keySet()) {
+       		string label = globalDescribe.get(sobjectName).getDescribe().getLabel();
+        	objectFromHashFull.put(label.replace(' ', '').toLowerCase(), sobjectName);
+         }
+        
+        objectFromHashFull.putAll(objectFromHash);
+        System.debug(objectFromHashFull);
+    	
+    	return objectFromHashFull.get(hashName);
+    }
+    
     Id parseParentId(string text) {
     	Id parentId;
     	
@@ -207,11 +223,8 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     	
     	integer tagStart = text.indexOf('#') + 1;
     	integer tagEnd = text.indexOf(' ', tagStart);
- 		string objectName = text.substring(tagStart, tagEnd).toLowerCase();
- 		
- 		if (objectFromHash.containsKey(objectName)) {
- 			objectName = objectFromHash.get(objectName);
- 		}
+ 		string hashName = text.substring(tagStart, tagEnd).toLowerCase();
+ 		string objectName = getObjectName(hashName);
  	
  		string recordName;
  		integer lineBreak = text.indexOf('\n', tagEnd);
@@ -507,7 +520,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        	return email;
     }
     
-    static void handleEmail(Messaging.InboundEmail email) {
+    public static void handleEmail(Messaging.InboundEmail email) {
 	    ChatterEmailHandler emailHandler = new ChatterEmailHandler();
 
     	Test.starttest();
