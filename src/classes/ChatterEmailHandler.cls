@@ -3,7 +3,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 	static Pattern objectHashPattern = Pattern.compile('#(\\w+)\\s+([\\w ]+)');
 	static map<string, string> objectQueryField = new map<string, string>{'contact' => 'email', 'case' => 'casenumber'};
 	static map<string, string> objectFromHash = new map<string, string>{'group' => 'CollaborationGroup'};
-	static boolean assertResults = false; // turn off before deploying to orgs that have not enabled feeds for all objects
+	static boolean assertResults = UserInfo.getOrganizationId().startsWith('00DE0000000KW41'); // turn off before deploying to orgs that have not enabled feeds for all objects
 	
     global Messaging.InboundEmailResult handleInboundEmail(Messaging.InboundEmail email, Messaging.InboundEnvelope envelope) {
 
@@ -226,31 +226,33 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
  		string hashName = text.substring(tagStart, tagEnd).toLowerCase();
  		string objectName = getObjectName(hashName);
  	
- 		string recordName;
- 		integer lineBreak = text.indexOf('\n', tagEnd);
- 		if (lineBreak != -1) {
- 			recordName = text.substring(tagEnd+1, lineBreak).trim();
- 		} else {
-			recordName = text.substring(tagEnd+1).trim();
+ 		if (objectName != null) {
+	 		string recordName;
+	 		integer lineBreak = text.indexOf('\n', tagEnd);
+	 		if (lineBreak != -1) {
+	 			recordName = text.substring(tagEnd+1, lineBreak).trim();
+	 		} else {
+				recordName = text.substring(tagEnd+1).trim();
+	 		}
+			
+			string queryField = 'name';
+			
+			if (objectQueryField.containsKey(objectName)) {
+				queryField = objectQueryField.get(objectName);
+			}		
+			
+			try {
+				list<SObject> objects = Database.query('select Id from ' + objectName + ' where ' + queryField + ' = \'' + recordName + '\' limit 1');
+				if (objects.size() > 0) {
+					parentId = objects[0].Id;
+				}  
+			} catch (QueryException ex) {
+				if (ex.getMessage().indexOf('sObject type') == -1) { // ignore plain hashtags that aren't sObject types
+					System.debug('Rethrowing');
+					throw ex;
+				}
+			} 	
  		}
-		
-		string queryField = 'name';
-		
-		if (objectQueryField.containsKey(objectName)) {
-			queryField = objectQueryField.get(objectName);
-		}		
-		
-		try {
-			list<SObject> objects = Database.query('select Id from ' + objectName + ' where ' + queryField + ' = \'' + recordName + '\' limit 1');
-			if (objects.size() > 0) {
-				parentId = objects[0].Id;
-			}  
-		} catch (QueryException ex) {
-			if (ex.getMessage().indexOf('sObject type') == -1) { // ignore plain hashtags that aren't sObject types
-				System.debug('Rethrowing');
-				throw ex;
-			}
-		} 	
     	
     	return parentId;
     }
