@@ -216,7 +216,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     	System.debug('Parsing parentId from ' + text);
     	
     	if (objectHashMatcher.find()) {
-    		objectName = objectHashMatcher.group(1).toLowerCase();
+    		objectName = getObjectName(objectHashMatcher.group(1).toLowerCase());
     		recordName = objectHashMatcher.group(2);
     		
     		if (objectQueryField.containsKey(objectName)) {
