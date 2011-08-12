@@ -1,6 +1,6 @@
 global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 	static boolean sendConfirmation = false; // TODO allow per-User setting
-	static Pattern objectHashPattern = Pattern.compile('#(\\w+)\\s+([\\w ]+)');
+	static Pattern objectHashPattern = Pattern.compile('#(\\w+)\\s+([\\w@\\. ]+)');
 	static Pattern linkPattern = Pattern.compile('(https?://[^\\s]+)');
 	static map<string, string> objectQueryField = new map<string, string>{'contact' => 'email', 'case' => 'casenumber'};
 	static map<string, string> objectFromHash = new map<string, string>{'group' => 'CollaborationGroup'};
@@ -20,6 +20,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
             try {
                Feedpost f = new Feedpost();
                f.ParentId = parseParentId(email);
+               System.debug('parentId ' + f.parentId);
                
                if (f.ParentId == null) {
                		result.success = false;
@@ -205,45 +206,25 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     
     Id parseParentId(string text) {
     	Id parentId;
+    	string objectName;
+    	string recordName;
+    	string queryField = 'name';
     	
-    	/* doesn't match
-    	Matcher objectHashMatcher = objectHashPattern.matcher(text);
+     	Matcher objectHashMatcher = objectHashPattern.matcher(text);
     	
     	System.debug(objectHashPattern);
     	System.debug('Parsing parentId from ' + text);
     	
-    	if (objectHashMatcher.matches()) {
-    		string objectName = objectHashMatcher.group(1).toLowerCase();
-    		string recordName = objectHashMatcher.group(2);
-    		string queryField = 'name';
+    	if (objectHashMatcher.find()) {
+    		objectName = objectHashMatcher.group(1).toLowerCase();
+    		recordName = objectHashMatcher.group(2);
     		
     		if (objectQueryField.containsKey(objectName)) {
     			queryField = objectQueryField.get(objectName);
     		}		
-    		
-    		list<SObject> objects = Database.query('select Id from ' + objectName + ' where ' + queryField + ' = \'' + recordName + '\' limit 1');
-    		if (objects.size() > 0) {
-    			parentId = objects[0].Id;
-    		}
     	}
-    	*/
-    	
-    	integer tagStart = text.indexOf('#') + 1;
-    	integer tagEnd = text.indexOf(' ', tagStart);
- 		string hashName = text.substring(tagStart, tagEnd).toLowerCase();
- 		string objectName = getObjectName(hashName);
  	
  		if (objectName != null) {
-	 		string recordName;
-	 		integer lineBreak = text.indexOf('\n', tagEnd);
-	 		if (lineBreak != -1) {
-	 			recordName = text.substring(tagEnd+1, lineBreak).trim();
-	 		} else {
-				recordName = text.substring(tagEnd+1).trim();
-	 		}
-			
-			string queryField = 'name';
-			
 			if (objectQueryField.containsKey(objectName)) {
 				queryField = objectQueryField.get(objectName);
 			}		
