@@ -1,6 +1,7 @@
 global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
 	static boolean sendConfirmation = false; // TODO allow per-User setting
 	static Pattern objectHashPattern = Pattern.compile('#(\\w+)\\s+([\\w ]+)');
+	static Pattern linkPattern = Pattern.compile('(https?://[^\\s]+)');
 	static map<string, string> objectQueryField = new map<string, string>{'contact' => 'email', 'case' => 'casenumber'};
 	static map<string, string> objectFromHash = new map<string, string>{'group' => 'CollaborationGroup'};
 	static boolean assertResults = UserInfo.getOrganizationId().startsWith('00DE0000000KW41'); // turn off before deploying to orgs that have not enabled feeds for all objects
@@ -52,23 +53,25 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                else
                {
                	System.debug('bodytext ' + bodytext);
-                 if (bodytext != null && bodytext.contains('http://')) {
-                 	System.debug('Parsing link');
-                 	if (subjecttext.length() > 255) {
-                 		f.Title = subjecttext.substring(0, 255);
-                 	} else {
-                 		f.Title = subjecttext;
-                 	}
-                 	
-                 	integer linkStart = bodytext.indexOf('http://');
-                 	integer linkEnd = bodyText.indexOf('\n', linkStart);
-                 	if (linkEnd != -1) {
-                 		f.LinkUrl = bodytext.substring(linkStart, linkEnd);
-                 	} else {
-                 		f.LinkUrl = bodytext.substring(linkStart);                 		
-                 	}
-                 	bodytext = bodytext.replace(f.LinkUrl, '');
-                 } else {   
+    			
+                if (bodytext != null) {
+     				Matcher linkMatcher = linkPattern.matcher(bodytext);
+                	
+                	if (linkMatcher.find()) {
+	                 	f.linkUrl = linkMatcher.group(1);
+	                 	bodytext = bodytext.replace(f.LinkUrl, '');
+
+	                 	if (subjecttext.length() > 255) {
+	                 		f.Title = subjecttext.substring(0, 255);
+	                 	} else {
+	                 		f.Title = subjecttext;
+	                 	}	    
+	                 	             	
+	                 	System.debug('Parsed link ' +f.LinkUrl);	                 	
+                	}
+                 } 
+
+				 if (f.LinkUrl == null) {   
                  	System.debug('No link');
 	                 if (bodytext != null) {
 	                     if (subjecttext != null)  {             	                 
@@ -102,6 +105,10 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
             } catch (Exception e) {
                result.message='Sorry, your Chatter status could not be set.\n\n' + e.getMessage() + '\n\n' +e.getStackTraceString();
                result.success = false;
+               
+               if (Test.isRunningTest()) {
+               		throw e;
+               }
             }
 
             return result;
@@ -436,6 +443,19 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        
        string postBody = 'Post Body';
        string link = 'http://salesforce.com';
+       email.plainTextBody = link + '\n' + postBody;
+       
+       handleEmail(email);
+       
+       System.assertEquals(1, [select count() From NewsFeed where FeedPost.Title = :email.subject and FeedPost.LinkUrl = :link and FeedPost.Body = :postBody]);
+    }
+
+    static testMethod void testSecureLink(){
+       Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+       email.subject = 'Link Title';
+       
+       string postBody = 'Post Body';
+       string link = 'https://salesforce.com';
        email.plainTextBody = link + '\n' + postBody;
        
        handleEmail(email);
