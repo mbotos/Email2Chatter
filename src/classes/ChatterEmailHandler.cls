@@ -107,7 +107,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                result.message='Sorry, your Chatter status could not be set.\n\n' + e.getMessage() + '\n\n' +e.getStackTraceString();
                result.success = false;
                
-               if (Test.isRunningTest()) {
+               if (assertResults && Test.isRunningTest()) {
                		throw e;
                }
             }
