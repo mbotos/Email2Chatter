@@ -41,14 +41,16 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                    
                    f.ContentFileName = email.binaryAttachments[0].filename;
 
-                   if (bodytext.length() > 1000)
-                   {
-                      f.ContentDescription = bodytext.substring (0,1000);
-                   }
-                   else
-                   {
-                      f.ContentDescription = email.plainTextBody;
-                   }
+				   if (bodytext != null) {
+	                   if (bodytext.length() > 1000)
+	                   {
+	                      f.ContentDescription = bodytext.substring (0,1000);
+	                   }
+	                   else
+	                   {
+	                      f.ContentDescription = email.plainTextBody;
+	                   }
+				   }
 
                }
                else
