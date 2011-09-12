@@ -145,7 +145,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     }
     
     string getSubjectText(Messaging.InboundEmail email, boolean removeHash) {
-    	string text = email.subject;
+    	string text = email.subject.replace('Fwd: ', '');
     	
     	if (removeHash) {
 	        integer hashIndex = text.indexOf('#');   
