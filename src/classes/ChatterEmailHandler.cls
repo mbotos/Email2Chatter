@@ -163,33 +163,6 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
     	return i.startsWith('005');
     }
     
-    Id parseParentId(Messaging.InboundEmail email) {
-    	Id parentId;
-    	
-    	System.debug('Parsing parentId from email ' + email);
-    	
-    	if (email.subject.indexOf('#') != -1) {
-    		
-    		parentId = parseParentId(email.subject);
-    		
-    	} else if (email.plainTextBody != null && email.plainTextBody.indexOf('#') != -1) {
-    		
-    		parentId = parseParentId(email.plainTextBody); 
-    		   		
-    	} 
-
-		if (parentId == null) {  		
-    		try {
-               parentId = [select id from User where email = :email.fromAddress and IsActive = true limit 1].id;
-            } catch (QueryException ex) {
-            	parentId = UserInfo.getUserId();
-            }
-    		
-    	}
-    	
-    	return parentId;
-    }
-    
     string getObjectName(string hashName) {
     	map<string, string> objectFromHashFull = new map<string, string>();
     	
@@ -204,6 +177,31 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
         System.debug(objectFromHashFull);
     	
     	return objectFromHashFull.get(hashName);
+    }
+    
+    Id parseParentId(Messaging.InboundEmail email) {
+    	Id parentId;
+    	
+    	System.debug('Parsing parentId from email ' + email);
+    	
+    	if (email.subject.indexOf('#') != -1) {   		
+    		parentId = parseParentId(email.subject);   		
+    	} 
+    	
+    	if (parentId == null && email.plainTextBody != null && email.plainTextBody.indexOf('#') != -1) {    		
+    		parentId = parseParentId(email.plainTextBody);     		   		
+    	} 
+
+		if (parentId == null) {  		
+    		try {
+               parentId = [select id from User where email = :email.fromAddress and IsActive = true limit 1].id;
+            } catch (QueryException ex) {
+            	parentId = UserInfo.getUserId();
+            }
+    		
+    	}
+    	
+    	return parentId;
     }
     
     Id parseParentId(string text) {
@@ -502,6 +500,23 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        		System.assertEquals(1, [select count() From NewsFeed where FeedPost.Title = :email.subject]);
     	}
     }
+
+    static testMethod void testNonObjectHashSubjectWithObjectHashBody(){
+       Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+
+       Account a = new account(Name='Test Account');
+       insert a;
+
+       email.subject = '#hash';
+       string body = 'Test Body';
+       email.plainTextBody = '#account ' + a.Name + '\n' + body;
+       
+       handleEmail(email);
+       
+       if (assertResults) {
+       		System.assertEquals(1, [select count() From AccountFeed where ParentId = :a.id and FeedPost.Body = :body]);
+    	}
+   }
 
     /* Access to CollaborationGroup is not supported
     static testMethod void testGroupLink() {      
