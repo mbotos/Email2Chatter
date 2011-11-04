@@ -1,8 +1,9 @@
 global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
+	public static map<string, string> objectQueryField = new map<string, string>{'contact' => 'email', 'case' => 'casenumber'};
+
 	static boolean sendConfirmation = false; // TODO allow per-User setting
 	static Pattern objectHashPattern = Pattern.compile('#(\\w+)\\s+([\\w@\\. ]+)');
 	static Pattern linkPattern = Pattern.compile('(https?://[^\\s]+)');
-	static map<string, string> objectQueryField = new map<string, string>{'contact' => 'email', 'case' => 'casenumber'};
 	static map<string, string> objectFromHash = new map<string, string>{'group' => 'CollaborationGroup'};
 	static boolean assertResults = UserInfo.getOrganizationId().startsWith('00DE0000000KW41'); // turn off before deploying to orgs that have not enabled feeds for all objects
 	
@@ -33,6 +34,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                String bodytext = getBodyText(email, removeHash);
                String subjecttext = getSubjectText(email, removeHash);
                
+               System.debug('email ' + email);
                if (email.binaryAttachments != null)
                {
                    f.body = subjecttext;
