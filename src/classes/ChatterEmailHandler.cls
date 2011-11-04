@@ -37,23 +37,31 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                System.debug('email ' + email);
                if (email.binaryAttachments != null)
                {
-                   f.body = subjecttext != null ? subjecttext : bodytext;
-                   f.Type = 'ContentPost';
-                   f.ContentData = email.binaryAttachments[0].body;
-                   
-                   f.ContentFileName = email.binaryAttachments[0].filename;
-
-				   if (bodytext != null) {
-	                   if (bodytext.length() > 1000)
-	                   {
-	                      f.ContentDescription = bodytext.substring (0,1000);
-	                   }
-	                   else
-	                   {
-	                      f.ContentDescription = email.plainTextBody;
-	                   }
-				   }
-
+               		list<FeedPost> posts = new list<FeedPost>();
+               		
+               		for (Messaging.Inboundemail.Binaryattachment attachment : email.binaryAttachments) {
+               			FeedPost fp = f.clone();
+	                   fp.body = subjecttext != null ? subjecttext : bodytext;
+	                   fp.Type = 'ContentPost';
+	                   fp.ContentData = attachment.body;
+	                   
+	                   fp.ContentFileName = attachment.filename;
+	
+					   if (bodytext != null) {
+		                   if (bodytext.length() > 1000)
+		                   {
+		                      fp.ContentDescription = bodytext.substring (0,1000);
+		                   }
+		                   else
+		                   {
+		                      fp.ContentDescription = email.plainTextBody;
+		                   }
+					   }
+					   
+					   posts.add(fp);
+               		}
+               		
+               		insert posts;
                }
                else
                {
@@ -95,11 +103,10 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                    {
                       f.body = bodytext;
                    }
-
+              
+	               System.debug('FeedPost ' + f);
+	               insert f;
                }
-               
-               System.debug('FeedPost ' + f);
-               insert f;
 
                if (sendConfirmation) {
                 	result.message='Your Chatter status has been successfully set to: ' + f.body;
@@ -519,6 +526,22 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
        		System.assertEquals(1, [select count() From AccountFeed where ParentId = :a.id and FeedPost.Body = :body]);
     	}
    }
+
+    static testMethod void testAttachment(){
+       Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+       email.subject = 'Test Attachment';
+       
+       list<Messaging.Inboundemail.Binaryattachment> attachments = new list<Messaging.Inboundemail.Binaryattachment>();
+       Messaging.Inboundemail.Binaryattachment attachment = new Messaging.Inboundemail.Binaryattachment();
+       attachment.body = Blob.valueOf('test');
+       attachment.fileName = 'Test file';
+       attachments.add(attachment);
+       email.binaryAttachments = attachments; 
+       
+       handleEmail(email);
+       
+       System.assertEquals(attachment.fileName, [select FeedPost.ContentFileName From NewsFeed where FeedPost.Body = :email.subject].FeedPost.ContentFileName);
+    }
 
     /* Access to CollaborationGroup is not supported
     static testMethod void testGroupLink() {      
