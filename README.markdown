@@ -1,7 +1,9 @@
 About
 -----
 
-Fork of [Force.com Labs Email2Chatter App ](http://appexchange.salesforce.com/listingDetail?listingId=a0N30000003GKAOEA4) which supports posting to all standard and custom objects, and parses links into the appropriate Chatter post fields. Specifically:
+Fork of [Force.com Labs Email2Chatter App ](http://appexchange.salesforce.com/listingDetail?listingId=a0N30000003GKAOEA4) which supports posting to all standard and custom objects, multiple attachments, and parses links into the appropriate Chatter post fields. 
+
+For links:
 
 - Subject becomes link Title
 - Link is extracted from email body and becomes LinkUrl
