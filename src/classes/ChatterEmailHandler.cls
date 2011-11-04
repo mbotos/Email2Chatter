@@ -37,7 +37,7 @@ global class ChatterEmailHandler implements Messaging.InboundEmailHandler {
                System.debug('email ' + email);
                if (email.binaryAttachments != null)
                {
-                   f.body = subjecttext;
+                   f.body = subjecttext != null ? subjecttext : bodytext;
                    f.Type = 'ContentPost';
                    f.ContentData = email.binaryAttachments[0].body;
                    
