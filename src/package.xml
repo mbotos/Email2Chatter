@@ -2,11 +2,24 @@
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
         <members>ChatterEmailHandler</members>
+        <members>ChatterEmailHandler_test</members>
         <name>ApexClass</name>
     </types>
     <types>
         <members>EmailChatterSetup</members>
         <name>ApexPage</name>
     </types>
-    <version>20.0</version>
+    <types>
+        <members>Email2Chatter</members>
+        <name>CustomApplication</name>
+    </types>
+    <types>
+        <members>Email2Chatter_Setup</members>
+        <name>CustomTab</name>
+    </types>
+    <types>
+        <members>Email2Chatter</members>
+        <name>StaticResource</name>
+    </types>
+    <version>30.0</version>
 </Package>
