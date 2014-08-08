@@ -2,11 +2,7 @@
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
         <members>ChatterEmailHandler</members>
-<<<<<<< HEAD
         <members>ChatterEmailHandler_test</members>
-=======
-        <members>ChatterEmailHandlerCustom_Test</members>
->>>>>>> FETCH_HEAD
         <name>ApexClass</name>
     </types>
     <types>
