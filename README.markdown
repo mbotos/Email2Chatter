@@ -20,6 +20,4 @@ This should be particularly useful for the following cases:
 Installation
 ------------
  
-For an easy, 1-click installation: [Email2Chatter Unmanaged Package v1.2](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tE0000000HDpr)
-
-To use the source code with a Salesforce org: [How To Use Github and the Force.com IDE](http://blog.sforce.com/sforce/2011/04/how-to-use-git-github-force-com-ide-open-source-labs-apps.html) 
+To install the source code in a Salesforce org, use the [GitHub Salesforce Deploy Tool](https://githubsfdeploy.herokuapp.com/?owner=mbotos&repo=Email2Chatter).
